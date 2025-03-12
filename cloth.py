@@ -50,11 +50,13 @@ def overlay_cloth_on_user(user_image, cloth_image):
     y_offset = max(0, y_offset)
     x_offset = max(0, x_offset)
 
-    # Overlay the resized clothing on top of the detected body region
+    # Alpha blending for smoother overlay
     for c in range(3):  # For all color channels (RGB)
+        # Calculate the alpha blend (cloth over user image)
+        alpha = cloth_resized[:, :, c] / 255.0
         user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] = (
-            (1 - cloth_resized[:, :, c] / 255) * user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] +
-            (cloth_resized[:, :, c] / 255) * cloth_resized[:, :, c]
+            (1 - alpha) * user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] + 
+            alpha * cloth_resized[:, :, c]
         )
 
     return user_image
