@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import mediapipe as mp
+import io
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
@@ -37,7 +38,7 @@ def overlay_cloth_on_user(user_image, cloth_image):
     # Ensure the cloth image has 3 channels (RGB or BGR)
     if cloth_resized.ndim == 2:  # if the clothing image is grayscale
         cloth_resized = cv2.cvtColor(cloth_resized, cv2.COLOR_GRAY2BGR)
-    
+
     # Ensure that cloth_resized has 3 channels
     if cloth_resized.shape[2] != 3:
         raise ValueError("Clothing image must have 3 channels (RGB or BGR).")
@@ -63,9 +64,9 @@ def overlay_cloth_on_user(user_image, cloth_image):
     for c in range(3):  # For all color channels (RGB)
         # Calculate the alpha blend (cloth over user image)
         alpha = cloth_resized[:, :, c] / 255.0
-        user_image_copy[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] = (
-            (1 - alpha) * user_image_copy[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] + 
-            alpha * cloth_resized[:, :, c]
+        user_image_copy[y_offset:y_offset + cloth_resized.shape[0], x_offset:x_offset + cloth_resized.shape[1], c] = (
+                (1 - alpha) * user_image_copy[y_offset:y_offset + cloth_resized.shape[0], x_offset:x_offset + cloth_resized.shape[1], c] +
+                alpha * cloth_resized[:, :, c]
         )
 
     return user_image_copy
@@ -98,7 +99,10 @@ if user_image_file and cloth_file:
     st.image(final_image_pil, caption="Result", use_column_width=True)
 
     # Provide an option to download the final image
-    final_image_bytes = final_image_pil.tobytes()
+    with io.BytesIO() as output:
+        final_image_pil.save(output, format="PNG")
+        final_image_bytes = output.getvalue()
+
     st.download_button("Download Image", data=final_image_bytes, file_name="virtual_tryon_result.png", mime="image/png")
 
 else:
