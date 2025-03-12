@@ -53,19 +53,22 @@ def overlay_cloth_on_user(user_image, cloth_image):
     # Clip the clothing image to prevent it from going out of bounds of the user image
     y_end = min(y_offset + body_height, user_image.shape[0])
     x_end = min(x_offset + body_width, user_image.shape[1])
-    
+
     cloth_resized = cloth_resized[:y_end - y_offset, :x_end - x_offset]
+
+    # Ensure the destination area in user image is large enough to hold the resized clothing
+    user_image_copy = user_image.copy()
 
     # Alpha blending for smoother overlay
     for c in range(3):  # For all color channels (RGB)
         # Calculate the alpha blend (cloth over user image)
         alpha = cloth_resized[:, :, c] / 255.0
-        user_image[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] = (
-            (1 - alpha) * user_image[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] + 
+        user_image_copy[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] = (
+            (1 - alpha) * user_image_copy[y_offset:y_offset+cloth_resized.shape[0], x_offset:x_offset+cloth_resized.shape[1], c] + 
             alpha * cloth_resized[:, :, c]
         )
 
-    return user_image
+    return user_image_copy
 
 st.title("Virtual Clothing Try-On")
 
