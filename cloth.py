@@ -4,13 +4,29 @@ import numpy as np
 from PIL import Image
 
 def overlay_cloth_on_user(user_image, cloth_image):
-    """Overlay the selected cloth image onto the user's photo."""
-    # Resize the clothing image to match the user's photo size
-    cloth_resized = cv2.resize(cloth_image, (user_image.shape[1], user_image.shape[0]))
+    """Overlay the selected cloth image onto the user's body."""
+    # Convert to grayscale for detecting body/clothing region (using a simple approach)
+    gray_user_image = cv2.cvtColor(user_image, cv2.COLOR_BGR2GRAY)
 
-    # Replace the pixels with the clothing image
+    # Load a pre-trained body detector (Haar Cascade classifier for simple body detection)
+    body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fullbody.xml')
+
+    # Detect bodies in the user's image (this is a simple method and may not be perfect)
+    bodies = body_cascade.detectMultiScale(gray_user_image, 1.1, 2)
+
+    if len(bodies) == 0:
+        st.warning("No body detected in the image. Please upload a clearer image.")
+        return user_image
+
+    # Assuming the first detected body is the one we want to overlay clothing on
+    x, y, w, h = bodies[0]
+
+    # Resize the clothing image to fit within the detected body region
+    cloth_resized = cv2.resize(cloth_image, (w, h))
+
+    # Overlay the resized clothing onto the detected body region
     for c in range(3):  # For all color channels (RGB)
-        user_image[:, :, c] = (1 - cloth_resized[:, :, c] / 255) * user_image[:, :, c] + (cloth_resized[:, :, c] / 255) * cloth_resized[:, :, c]
+        user_image[y:y+h, x:x+w, c] = (1 - cloth_resized[:, :, c] / 255) * user_image[y:y+h, x:x+w, c] + (cloth_resized[:, :, c] / 255) * cloth_resized[:, :, c]
     
     return user_image
 
@@ -31,7 +47,7 @@ if user_image_file and cloth_file:
 
     st.write("Processing...")
 
-    # Overlay the clothing onto the user's photo
+    # Overlay the clothing onto the detected body region of the user's photo
     final_image = overlay_cloth_on_user(user_image, selected_cloth)
 
     # Convert the final result from OpenCV (BGR) to PIL (RGB) for Streamlit display
