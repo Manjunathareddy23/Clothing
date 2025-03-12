@@ -2,33 +2,52 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
+import mediapipe as mp
+
+# Initialize MediaPipe Pose
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 def overlay_cloth_on_user(user_image, cloth_image):
-    """Overlay the selected cloth image onto the user's body."""
-    
-    # Convert to grayscale for detecting body/clothing region (using a simple approach)
-    gray_user_image = cv2.cvtColor(user_image, cv2.COLOR_BGR2GRAY)
+    """Overlay the selected cloth image onto the user's body using pose landmarks."""
+    # Convert to RGB for MediaPipe processing
+    user_image_rgb = cv2.cvtColor(user_image, cv2.COLOR_BGR2RGB)
 
-    # Load a pre-trained body detector (Haar Cascade classifier for simple body detection)
-    body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fullbody.xml')
+    # Perform pose detection
+    results = pose.process(user_image_rgb)
 
-    # Detect bodies in the user's image (this is a simple method and may not be perfect)
-    bodies = body_cascade.detectMultiScale(gray_user_image, 1.1, 2)
-
-    if len(bodies) == 0:
-        st.warning("No body detected in the image. Please upload a clearer image.")
+    # Check if pose landmarks are detected
+    if results.pose_landmarks is None:
+        st.warning("No pose detected. Please upload a clearer image.")
         return user_image
 
-    # Assuming the first detected body is the one we want to overlay clothing on
-    x, y, w, h = bodies[0]
+    # Draw the pose landmarks (for debugging or visualization)
+    annotated_image = user_image.copy()
+    mp.solutions.drawing_utils.draw_landmarks(annotated_image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-    # Resize the clothing image to fit within the detected body region
-    cloth_resized = cv2.resize(cloth_image, (w, h))
+    # Calculate the bounding box for the clothing overlay (using landmarks like shoulders and hips)
+    shoulder_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+    shoulder_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+    hip_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+    hip_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
 
-    # Overlay the resized clothing onto the detected body region
+    # Calculate width and height of the detected body region (between shoulders and hips)
+    body_width = int(abs(shoulder_right.x - shoulder_left.x) * user_image.shape[1])
+    body_height = int(abs(hip_left.y - shoulder_left.y) * user_image.shape[0])
+
+    # Resize the clothing image to match the detected body region
+    cloth_resized = cv2.resize(cloth_image, (body_width, body_height))
+
+    # Overlay the resized clothing on top of the detected body region
+    x_offset = int(shoulder_left.x * user_image.shape[1])
+    y_offset = int(shoulder_left.y * user_image.shape[0]) - body_height // 2
+
     for c in range(3):  # For all color channels (RGB)
-        user_image[y:y+h, x:x+w, c] = (1 - cloth_resized[:, :, c] / 255) * user_image[y:y+h, x:x+w, c] + (cloth_resized[:, :, c] / 255) * cloth_resized[:, :, c]
-    
+        user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] = (
+            (1 - cloth_resized[:, :, c] / 255) * user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] +
+            (cloth_resized[:, :, c] / 255) * cloth_resized[:, :, c]
+        )
+
     return user_image
 
 st.title("Virtual Clothing Try-On")
