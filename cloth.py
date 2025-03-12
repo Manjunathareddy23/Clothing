@@ -5,6 +5,7 @@ from PIL import Image
 
 def overlay_cloth_on_user(user_image, cloth_image):
     """Overlay the selected cloth image onto the user's body."""
+    
     # Convert to grayscale for detecting body/clothing region (using a simple approach)
     gray_user_image = cv2.cvtColor(user_image, cv2.COLOR_BGR2GRAY)
 
