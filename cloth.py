@@ -21,10 +21,6 @@ def overlay_cloth_on_user(user_image, cloth_image):
         st.warning("No pose detected. Please upload a clearer image.")
         return user_image
 
-    # Draw the pose landmarks (for debugging or visualization)
-    annotated_image = user_image.copy()
-    mp.solutions.drawing_utils.draw_landmarks(annotated_image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
     # Calculate the bounding box for the clothing overlay (using landmarks like shoulders and hips)
     shoulder_left = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
     shoulder_right = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER]
@@ -38,10 +34,19 @@ def overlay_cloth_on_user(user_image, cloth_image):
     # Resize the clothing image to match the detected body region
     cloth_resized = cv2.resize(cloth_image, (body_width, body_height))
 
-    # Overlay the resized clothing on top of the detected body region
+    # Ensure the cloth image has 3 channels (RGB)
+    if cloth_resized.shape[2] == 1:
+        cloth_resized = cv2.cvtColor(cloth_resized, cv2.COLOR_GRAY2BGR)
+
+    # Calculate the x and y offset for positioning the clothing
     x_offset = int(shoulder_left.x * user_image.shape[1])
     y_offset = int(shoulder_left.y * user_image.shape[0]) - body_height // 2
 
+    # Ensure the offsets are within bounds
+    y_offset = max(0, y_offset)
+    x_offset = max(0, x_offset)
+
+    # Overlay the resized clothing on top of the detected body region
     for c in range(3):  # For all color channels (RGB)
         user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] = (
             (1 - cloth_resized[:, :, c] / 255) * user_image[y_offset:y_offset+body_height, x_offset:x_offset+body_width, c] +
