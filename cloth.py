@@ -6,20 +6,19 @@ from PIL import Image
 def overlay_cloth_on_user(user_image, cloth_image):
     """
     This function overlays the selected cloth image onto the user's photo.
-    It assumes the clothing image is to be placed directly onto the user's photo.
+    The clothing is placed in the user's body area, assuming a simple direct replacement.
     """
-    # Resize the clothing image to fit the user's body
+    # Resize the clothing image to match the user's size
     cloth_resized = cv2.resize(cloth_image, (user_image.shape[1], user_image.shape[0]))
-    h, w, _ = cloth_resized.shape
-    user_h, user_w, _ = user_image.shape
 
-    # Place the clothing image directly over the user image
-    # Create a mask for the clothing to overlay
-    cloth_mask = np.ones((h, w), dtype=np.uint8) * 255  # Full opacity
+    # Define a mask for the cloth (simple full opacity mask for now)
+    cloth_mask = np.ones_like(cloth_resized, dtype=np.uint8) * 255
 
-    for c in range(3):  # Apply the blend on RGB channels
-        user_image[0:h, 0:w, c] = (1 - cloth_mask / 255) * user_image[0:h, 0:w, c] + \
-                                  (cloth_mask / 255) * cloth_resized[:, :, c]
+    # We assume here that the user's clothes area is the entire image, and we replace it with the clothing
+    # You can apply more sophisticated body part segmentation or pose detection for more advanced functionality.
+    for c in range(3):  # For all color channels (RGB)
+        # Replace the pixels with the clothing image, fully applying the mask (no transparency)
+        user_image[:, :, c] = (1 - cloth_mask / 255) * user_image[:, :, c] + (cloth_mask / 255) * cloth_resized[:, :, c]
 
     return user_image
 
@@ -32,7 +31,7 @@ user_image_file = st.file_uploader("Upload Your Photo", type=["jpg", "png", "jpe
 cloth_file = st.file_uploader("Upload Clothing Image", type=["jpg", "png", "jpeg"])
 
 if user_image_file and cloth_file:
-    # Read user's photo
+    # Read the user's photo as an image
     user_image = np.array(Image.open(user_image_file))
     
     # Read the clothing image
@@ -44,11 +43,11 @@ if user_image_file and cloth_file:
     final_image = user_image.copy()
     final_image = overlay_cloth_on_user(final_image, selected_cloth)
 
-    # Convert to PIL image for display
+    # Convert the final result from OpenCV (BGR) to PIL (RGB) for Streamlit display
     final_image_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
     final_image_pil = Image.fromarray(final_image_rgb)
 
-    # Display the final image
+    # Display the final image with the clothing overlay
     st.image(final_image_pil, caption="Result", use_column_width=True)
     
     # Provide an option to download the final image
