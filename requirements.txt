@@ -1,6 +1,5 @@
 streamlit
-opencv-python
+opencv-python==4.5.3.56
 mediapipe
 Pillow
 numpy
-cv2
