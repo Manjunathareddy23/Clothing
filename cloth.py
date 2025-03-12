@@ -83,7 +83,7 @@ if user_image_file and cloth_file:
     # Read the user's photo as an image
     user_image = np.array(Image.open(user_image_file))
 
-    # Read the clothing image
+
     selected_cloth = cv2.imdecode(np.frombuffer(cloth_file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
     st.write("Processing...")
