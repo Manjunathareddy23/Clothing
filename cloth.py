@@ -34,9 +34,13 @@ def overlay_cloth_on_user(user_image, cloth_image):
     # Resize the clothing image to match the detected body region
     cloth_resized = cv2.resize(cloth_image, (body_width, body_height))
 
-    # Ensure the cloth image has 3 channels (RGB)
-    if cloth_resized.shape[2] == 1:
+    # Ensure the cloth image has 3 channels (RGB or BGR)
+    if cloth_resized.ndim == 2:  # if the clothing image is grayscale
         cloth_resized = cv2.cvtColor(cloth_resized, cv2.COLOR_GRAY2BGR)
+    
+    # Ensure that cloth_resized has 3 channels
+    if cloth_resized.shape[2] != 3:
+        raise ValueError("Clothing image must have 3 channels (RGB or BGR).")
 
     # Calculate the x and y offset for positioning the clothing
     x_offset = int(shoulder_left.x * user_image.shape[1])
